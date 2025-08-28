@@ -24,7 +24,7 @@ import org.jsoup.Connection;
  
  public class App {
 
-    
+    private static JTextArea statusArea; // global
     public static Map<String, Object> bookDict = new HashMap<>();
     public static final Map<String, String> headers = new HashMap<>();
     static {
@@ -36,45 +36,78 @@ import org.jsoup.Connection;
         headers.put("Origin", "https://www.webnovel.com");
     }
 
-    // public static void main(String[] args) {
-    //     // Launch the UI
-    //     SwingUtilities.invokeLater(() -> showInputUI());
-    // }
-
-    // private static void showInputUI() {
-    //     JFrame frame = new JFrame("Novel URL Input");
-    //     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    //     frame.setSize(400, 100);
-    //     frame.setLayout(new BorderLayout(10, 10));
-
-    //     JPanel inputPanel = new JPanel(new BorderLayout(5, 5));
-    //     JLabel label = new JLabel("Website:");
-    //     JTextField textField = new JTextField();
-    //     inputPanel.add(label, BorderLayout.WEST);
-    //     inputPanel.add(textField, BorderLayout.CENTER);
-
-    //     JButton submitButton = new JButton("Submit");
-    //     submitButton.addActionListener(e -> {
-    //         String novelLink = textField.getText().trim();
-    //         if (novelLink.isEmpty()) {
-    //             JOptionPane.showMessageDialog(frame, "Please enter a URL!");
-    //         } else {
-    //             frame.dispose(); // Close the UI
-    //             // Run your main logic in a new thread to avoid blocking the EDT
-    //             new Thread(() -> runNovelProcessing(novelLink)).start();
-    //         }
-    //     });
-
-    //     frame.add(inputPanel, BorderLayout.CENTER);
-    //     frame.add(submitButton, BorderLayout.SOUTH);
-    //     frame.setLocationRelativeTo(null);
-    //     frame.setVisible(true);
-    // }
-
-
     public static void main(String[] args) {
-        String novelLink = "https://www.webnovel.com/book/33412005808141105";
-        //String novelLink = novelLink2;
+        // Launch the UI
+        SwingUtilities.invokeLater(() -> showInputUI());
+        //runNovelProcessing("https://en.webnovel.com/book/32843307508686305");
+    }
+
+    private static void showInputUI() {
+        JFrame frame = new JFrame("Novel URL Input");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 250); // smaller overall frame
+        frame.setLayout(new BorderLayout(10, 10));
+
+        // Input Panel
+        JPanel inputPanel = new JPanel(new BorderLayout(10, 10));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 10, 10));
+
+        JPanel labelWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        JLabel label = new JLabel("Website:");
+        labelWrapper.add(label);
+
+        JPanel textFieldWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JTextField textField = new JTextField();
+        textField.setPreferredSize(new Dimension(200, 25)); // smaller text field width
+        textFieldWrapper.add(textField);
+
+        inputPanel.add(labelWrapper, BorderLayout.WEST);
+        inputPanel.add(textFieldWrapper, BorderLayout.CENTER);
+        //////////////////////////////////////
+        statusArea = new JTextArea();
+        statusArea.setEditable(false);
+        statusArea.setLineWrap(true);
+        statusArea.setWrapStyleWord(true);
+        statusArea.setEditable(false);   // already prevents editing
+        statusArea.setHighlighter(null); // disables text selection highlighting
+        JScrollPane scrollPane = new JScrollPane(statusArea);
+        scrollPane.setPreferredSize(new Dimension(300, 110)); // fixed size
+        scrollPane.setMaximumSize(new Dimension(300, 110));
+        
+
+        // Center Panel to hold input + status
+        JPanel centerPanel = new JPanel();
+       // centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.add(inputPanel);
+        centerPanel.add(scrollPane);
+
+        // Submit Button
+        JButton submitButton = new JButton("Submit");
+        submitButton.addActionListener(e -> {
+            String novelLink = textField.getText().trim();
+            if (novelLink.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please enter a URL!");
+            } else {
+                new Thread(() -> {
+                    runNovelProcessing(novelLink); 
+                }).start();
+            }
+        });
+
+        frame.add(centerPanel, BorderLayout.CENTER);
+        frame.add(submitButton, BorderLayout.SOUTH);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+    }
+
+    public static void appendStatus(String msg) {
+        SwingUtilities.invokeLater(() -> statusArea.append(msg + "\n"));
+        System.out.println(msg);
+    }
+
+    public static void runNovelProcessing(String novelLink2) {
+        //String novelLink = "https://www.webnovel.com/book/33412005808141105";
+        String novelLink = novelLink2;
         String cookies = handleCookies();
         
         try {
@@ -88,15 +121,24 @@ import org.jsoup.Connection;
             if (response.statusCode() == 200) {
                 Document toc = response.parse();
                 Elements chapterLinks = toc.select(".volume-item a:not(:has(svg))");
+                
+                if(chapterLinks.size()==0){
+                    System.out.println("triggered no size");
+                    Elements chapterContainer = toc.select("ol[class^=ChapterList_chapterList]").select("a:not(:has(svg))");;
+                    chapterLinks = chapterContainer;
+                }
                 List<String> chapterHtmls = new ArrayList<>();
         
                 bookDict.put("Title", toc.title());
                 bookDict.put("Chapter Number",chapterLinks.size());
                 //bookDict.put("Chapters",chapterLinks);
-                System.out.println("Book has been gotten "+ toc.title());
+                appendStatus("Book has been gotten "+ bookDict);
+
 
                 for (Element chapter : chapterLinks) {
+                    //System.out.println(chapter);
                     String url = chapter.attr("abs:href");
+                    System.out.println(url);
                     Document chapterDoc = Jsoup.connect(url)
                         .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0") // User-Agent from your browser
                         .headers(headers)
@@ -105,10 +147,11 @@ import org.jsoup.Connection;
                         .execute() 
                         .parse();
 
-                    Element content = chapterDoc.selectFirst(".cha-words"); // chapter content div
+                    Element content = chapterDoc.selectFirst(".cha-words");
+                    System.out.println(content);
                     if (content != null) {
                         String title = chapter.attr("title");
-
+                        
                         if (!title.startsWith("Chapter")) {
                             title = "Chapter: " + title;
                         }
@@ -117,9 +160,10 @@ import org.jsoup.Connection;
                         }
                     
                         chapterHtmls.add("<h2>" + title + "</h2>" + content.html());
+                        appendStatus(title);
                         System.out.println(title);
                     }
-                }
+            }
 
                 
                 String title = bookDict.get("Title").toString().trim().replaceAll("[\\\\/:*?\"<>|]", "_") + ".pdf";
@@ -128,14 +172,11 @@ import org.jsoup.Connection;
                 HtmlConverter.convertToPdf(fullHtml, fos);
                 System.out.println("PDF created successfully!");
             }
-
-
         }
              catch (IOException e) {
                 e.printStackTrace();
                 System.out.println("Error Details: " + e.getMessage());
             }
-            System.exit(0);
     }
     
     public static String handleCookies(){
