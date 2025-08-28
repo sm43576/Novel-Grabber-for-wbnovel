@@ -2,3 +2,5 @@
 /Novel-Grabber-for-wbnovel/target
 *.pdf
 /target
+webnovelTest.py
+cookies.txt
