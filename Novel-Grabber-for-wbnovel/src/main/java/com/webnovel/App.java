@@ -38,15 +38,6 @@ import org.jsoup.Connection;
         "Origin", "https://www.webnovel.com"
     ));
     
-
-    private static String[] selectors = {
-        "ol[class^=ChapterList_chapterList] a:not(:has(svg))",
-        "ol.content-list a:not(:has(svg))",
-        "#contents > div > div.fs16.det-con-ol.oh.j_catalog_list",
-        "#contents > div > div.fs16.det-con-ol.oh.j_catalog_list > div > ol",
-        ".j_catalog_list"
-    };
-
     public static void main(String[] args) {
         // Launch the UI
         SwingUtilities.invokeLater(() -> showInputUI());
@@ -137,16 +128,13 @@ import org.jsoup.Connection;
 
             if (response.statusCode() == 200) {
                 Document toc = response.parse();
-                
-                for (String sel : selectors) {
-                    chapterLinks = toc.select(sel);
-                    System.out.println("trying chpater link"+sel + chapterLinks.isEmpty());
-                    if (!chapterLinks.isEmpty()) {
-                        break; // found something, stop looping
-                    }
-                }
-                
-                // 
+                Document chapterListPage = Jsoup.connect(toc.selectFirst("a.j_show_contents").attr("abs:href"))
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0") // User-Agent from your browser
+                    .headers(headers)
+                    .header("Cookie", cookies)
+                    .timeout(10000) // Timeout to avoid long waits
+                    .get();
+                chapterLinks = chapterListPage.select(".volume-item a:not(:has(svg))");
                 System.out.println("Found " + chapterLinks.size() + " chapters");
                 
                 
