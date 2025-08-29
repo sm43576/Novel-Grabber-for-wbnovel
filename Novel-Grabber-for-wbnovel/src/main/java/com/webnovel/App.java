@@ -4,6 +4,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.jsoup.nodes.Element;
 import com.itextpdf.html2pdf.HtmlConverter;
+
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -25,8 +27,11 @@ import org.jsoup.Connection;
  public class App {
 
     private static JTextArea statusArea; // global
+    private static String cookies; // global
     public static Map<String, Object> bookDict = new HashMap<>();
     public static final Map<String, String> headers = new HashMap<>();
+
+
     static {
         headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0");
         headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
@@ -72,7 +77,7 @@ import org.jsoup.Connection;
         statusArea.setHighlighter(null); // disables text selection highlighting
         JScrollPane scrollPane = new JScrollPane(statusArea);
         scrollPane.setPreferredSize(new Dimension(300, 110)); // fixed size
-        scrollPane.setMaximumSize(new Dimension(300, 110));
+        scrollPane.setMinimumSize(new Dimension(300, 110));
         
 
         // Center Panel to hold input + status
@@ -85,6 +90,7 @@ import org.jsoup.Connection;
         JButton submitButton = new JButton("Submit");
         submitButton.addActionListener(e -> {
             String novelLink = textField.getText().trim();
+            clearStatus();
             if (novelLink.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Please enter a URL!");
             } else {
@@ -105,10 +111,14 @@ import org.jsoup.Connection;
         System.out.println(msg);
     }
 
+    public static void clearStatus() {
+        SwingUtilities.invokeLater(() -> statusArea.setText(""));
+    }
+
     public static void runNovelProcessing(String novelLink2) {
         //String novelLink = "https://www.webnovel.com/book/33412005808141105";
         String novelLink = novelLink2;
-        String cookies = handleCookies();
+        cookies = handleCookies();
         
         try {
             Connection.Response response = Jsoup.connect(novelLink)
@@ -123,50 +133,23 @@ import org.jsoup.Connection;
                 Elements chapterLinks = toc.select(".volume-item a:not(:has(svg))");
                 
                 if(chapterLinks.size()==0){
-                    System.out.println("triggered no size");
+                    //System.out.println("triggered no size");
                     Elements chapterContainer = toc.select("ol[class^=ChapterList_chapterList]").select("a:not(:has(svg))");;
                     chapterLinks = chapterContainer;
                 }
                 List<String> chapterHtmls = new ArrayList<>();
-        
-                bookDict.put("Title", toc.title());
-                bookDict.put("Chapter Number",chapterLinks.size());
-                //bookDict.put("Chapters",chapterLinks);
-                appendStatus("Book has been gotten "+ bookDict);
-
-
-                for (Element chapter : chapterLinks) {
-                    //System.out.println(chapter);
-                    String url = chapter.attr("abs:href");
-                    System.out.println(url);
-                    Document chapterDoc = Jsoup.connect(url)
-                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0") // User-Agent from your browser
-                        .headers(headers)
-                        .header("Cookie", cookies)
-                        .timeout(10000) 
-                        .execute() 
-                        .parse();
-
-                    Element content = chapterDoc.selectFirst(".cha-words");
-                    System.out.println(content);
-                    if (content != null) {
-                        String title = chapter.attr("title");
-                        
-                        if (!title.startsWith("Chapter")) {
-                            title = "Chapter: " + title;
-                        }
-                        if (!chapterHtmls.isEmpty()) {
-                            chapterHtmls.add("<div style='page-break-before: always;'></div>");
-                        }
-                    
-                        chapterHtmls.add("<h2>" + title + "</h2>" + content.html());
-                        appendStatus(title);
-                        System.out.println(title);
-                    }
-            }
-
                 
-                String title = bookDict.get("Title").toString().trim().replaceAll("[\\\\/:*?\"<>|]", "_") + ".pdf";
+                
+                bookDict.put("Title", toc.title());
+                bookDict.put("Synopsis", toc.selectFirst(".j_synopsis"));
+                bookDict.put("Chapter Number",chapterLinks.size());
+                appendStatus("Book has been gotten "+ bookDict.get("Title"));
+
+                chapterHtmls = initTitlePage(chapterHtmls,chapterLinks);
+
+            
+                new File("novels").mkdirs(); // ensure /novel exists
+                String title ="novels/" + bookDict.get("Title").toString().trim().replaceAll("[\\\\/:*?\"<>|]", "_") + ".pdf";
                 FileOutputStream fos = new FileOutputStream(title);
                 String fullHtml = String.join("<hr>", chapterHtmls);
                 HtmlConverter.convertToPdf(fullHtml, fos);
@@ -212,6 +195,64 @@ import org.jsoup.Connection;
         return finalCookies;        
     }
 
+    public static List<String> initTitlePage(List<String> chapterHtmls, Elements chapterLinks){
+        // Add title page//
+        chapterHtmls.add("<div style='text-align:center; page-break-after: always;'>"
+        + "<h1>" + bookDict.get("Title") + "</h1>"
+        + "<p><em>" + bookDict.get("Synopsis") + "</em></p>"
+        + "</div>");
+
+        StringBuilder toc = new StringBuilder("<div style='page-break-after: always;'>");
+        toc.append("<h2>Table of Contents</h2><ul>");
+        for (Element chapter : chapterLinks) {
+            String title = chapter.attr("title");
+            if (!title.startsWith("Chapter")) {
+                title = "Chapter: " + title;
+            }
+            toc.append("<li>").append(title).append("</li>");
+        }
+        toc.append("</ul></div>");
+        chapterHtmls.add(toc.toString());
+
+        try{
+            for (Element chapter : chapterLinks) {
+                    //System.out.println(chapter);
+                    String url = chapter.attr("abs:href");
+                    //System.out.println(url);
+                    Document chapterDoc = Jsoup.connect(url)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0") // User-Agent from your browser
+                        .headers(headers)
+                        .header("Cookie", cookies)
+                        .timeout(10000) 
+                        .execute() 
+                        .parse();
+
+                    Element content = chapterDoc.selectFirst(".cha-words");
+                    //System.out.println(content);
+                    if (content != null) {
+                        String title = chapter.attr("title");
+                        
+                        if (!title.startsWith("Chapter")) {
+                            title = "Chapter: " + title;
+                        }
+                        if (!chapterHtmls.isEmpty()) {
+                            chapterHtmls.add("<div style='page-break-before: always;'></div>");
+                        }
+                    
+                        chapterHtmls.add("<h2>" + title + "</h2>" + content.html());
+                        appendStatus(title);
+                        System.out.println(title);
+                    }
+                }
+        }catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Error Details: " + e.getMessage());
+        }
+
+
+        return chapterHtmls;
+    
+    }
 
 }
  
