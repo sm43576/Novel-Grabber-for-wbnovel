@@ -212,17 +212,12 @@ import org.jsoup.Connection;
             if (!title.startsWith("Chapter")) {
                 title = "Chapter: " + title;
             }
-
-            // Add the hyperlink in ToC that links to the chapter header
             toc.append("<li><a href='#" + chapterId + "'>" + title + "</a></li>");
         }
 
         toc.append("</ul></div>");
-
-        // Add the Table of Contents to the chapterHtmls list
         chapterHtmls.add(toc.toString());
 
-        // Now iterate through the chapters and append the content
         try {
             for (Element chapter : chapterLinks) {
                 String url = chapter.attr("abs:href");
@@ -243,8 +238,6 @@ import org.jsoup.Connection;
                     if (!title.startsWith("Chapter")) {
                         title = "Chapter: " + title;
                     }
-
-                    // Add a page break and chapter title with anchor ID
                     if (!chapterHtmls.isEmpty()) {
                         chapterHtmls.add("<div style='page-break-before: always;'></div>");
                     }
