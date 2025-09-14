@@ -105,7 +105,7 @@ import org.jsoup.Connection;
 
     public static void appendStatus(String msg) {
         SwingUtilities.invokeLater(() -> statusArea.append(msg + "\n"));
-        System.out.println(msg);
+        //System.out.println(msg);
     }
 
     public static void clearStatus() {
@@ -135,7 +135,7 @@ import org.jsoup.Connection;
                     .timeout(10000) // Timeout to avoid long waits
                     .get();
                 chapterLinks = chapterListPage.select(".volume-item a:not(:has(svg))");
-                System.out.println("Found " + chapterLinks.size() + " chapters");
+                //System.out.println("Found " + chapterLinks.size() + " chapters");
                 
                 
                 bookDict.put("Title", toc.title());
@@ -151,7 +151,8 @@ import org.jsoup.Connection;
                 FileOutputStream fos = new FileOutputStream(title);
                 String fullHtml = String.join("<hr>", chapterHtmls);
                 HtmlConverter.convertToPdf(fullHtml, fos);
-                System.out.println("PDF created successfully!");
+                //System.out.println("PDF created successfully!");
+                appendStatus(title + "was created sucessfully!");
             }
         }
              catch (IOException e) {
