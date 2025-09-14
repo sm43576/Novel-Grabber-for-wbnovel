@@ -10,6 +10,7 @@ update cookies.txt with parameters found in your header, this can be found using
 2. copy and paste the headers into gpt with the formatting in cookies.txt
 3. paste the formatted structure back into cookies.txt
 
+cd project
 mvn clean install
 mvn compile
 
