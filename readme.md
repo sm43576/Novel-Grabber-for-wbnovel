@@ -1,7 +1,7 @@
 # Novel Grabber for wbnovel
 
 ## Overview
-Novel Grabber for wbnovel is a Java-based ui designed to efficiently download novels from wbnovel. It handles authentication, session management, and patches the deprecated repo that currently exists.
+Novel Grabber for wbnovel is a Java-based ui designed to efficiently download novels from webnovel. It handles authentication, session management, and patches the deprecated repo that currently exists.
 
 ## Requirements
 
