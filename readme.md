@@ -1,15 +1,20 @@
-# Novel Grabber for wbnovel
+# Collection of tools for refactoring novels
 
-## Overview
+## Novel Grabber for wbnovel
+
+### Overview
+
 Novel Grabber for wbnovel is a Java-based ui designed to efficiently download novels from webnovel. It handles authentication, session management, and patches the deprecated repo that currently exists.
 
-## Requirements
+### Requirements
 
-### Dependencies
+#### Dependencies
+
 - **Maven** - Build automation tool
 - **JDK 8.0 or higher** - Java Development Kit
 
-### Configure Authentication Cookies
+#### Configure Authentication Cookies
+
 The tool requires valid browser cookies to authenticate with wbnovel:
 
 - Open Developer Tools (F12 or Ctrl+Shift+I)
@@ -21,7 +26,7 @@ The tool requires valid browser cookies to authenticate with wbnovel:
 
 let AI handle this section when needed.
 
-## Installation & Setup
+### Installation & Setup
 
 ```bash
 git clone https://github.com/sm43576/Novel-Grabber-for-wbnovel.git
@@ -31,8 +36,11 @@ mvn clean install
 mvn compile
 
 ```
+
 Then execute the JAR file directly after building.
 
 Credits
 Original Author: flameish - Original Novel Grabber implementation
 Cloudflare Patches: sm43576 - Added patches and fixes for Cloudflare
+
+## Novel Glossary Replacer
