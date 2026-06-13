@@ -6,4 +6,9 @@ webnovelTest.py
 
 cookies.example.txt
 cookies.txt
+
 /Novel-Glossary/input
+
+# ignore everything inside novels
+/novels/*
+!/novels/.gitkeep
